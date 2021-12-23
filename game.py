@@ -16,6 +16,7 @@ class Scorers_Tower:
         self.radius = 200
         self.tower = pygame.image.load('tower_1_lvl.jpeg')
         self.tower_rect = self.tower.get_rect(center=(x, y))
+        self.bombs = []
 
     def draw(self):
         screen.blit(self.tower, self.tower_rect)
@@ -41,18 +42,39 @@ class Scorers_Tower:
                     npcInRange[minimum], npcInRange[i] =  npcInRange[i], npcInRange[minimum]
         return npcInRange[0][0]
 
+    def maintainTower(self):
+        c = [Core((1920//2, 1080//2))]
+        scorers.checkRange(npc)
+        if scorers.chooseTarget(npc):
+            for projectile in c:
+                projectile.draw(screen)
+                projectile.move(npc)
+                projectile.explosion(scorers.chooseTarget(npc), npc)
+        # 1) следит за ядрами мувает их следит за теми которые долетели и убирает их
+        # 2) осуществляет прицеивание и стрельбу
+
+    def shoot(self, npc):
+        self.bombs.append(Core(((1920 // 2, 1080 // 2), (npc[i].x, npc[i].y))))
+
 
 class Core:
     def __init__(self, center):
+        self.hit = False
         self.center = center
         self.x, self.y = self.center
         self.boomRadius = 100
         self.damage = 300
         self.core = pygame.image.load('ball1.png')
         self.core_rect = self.core.get_rect(center=(self.x, self.y))
+        self.explosion_animation = [pygame.image.load(f"boom{i}.png") for i in range(1, 6)]
 
-    def draw(self):
-        screen.blit(self.core, self.core_rect)
+    def draw(self, screen):
+        if self.hit:
+            if self.explosion_animation:
+                screen.blit(self.explosion_animation[0], self.core_rect)
+                self.explosion_animation.pop(0)
+        else:
+            screen.blit(self.core, self.core_rect)
 
     def move(self, npc_array):
         for i in range(len(npc_array)):
@@ -72,12 +94,12 @@ class Core:
 
     def explosion(self, npc, npc_array):
         for i in range(len(npc_array)):
-            xo = npc.x - npc_array[i].x
-            yo = npc.y - npc_array[i].y
-            distanceFromEpicenter = (xo ** 2 + yo ** 2) ** 0.5
-            if distanceFromEpicenter <= self.boomRadius:
-                npc_array[i].hp -= self.damage
-                print(npc_array[i].hp)
+            if npc.x == npc_array[i].x and npc.y == npc_array[i].y:
+                xo = npc.x - npc_array[i].x
+                yo = npc.y - npc_array[i].y
+                distanceFromEpicenter = (xo ** 2 + yo ** 2) ** 0.5
+                if distanceFromEpicenter <= self.boomRadius:
+                    npc_array[i].hp -= self.damage
 
 
 class Npc:
@@ -89,10 +111,13 @@ class Npc:
 
 scorers = Scorers_Tower(1920 // 2, 1080 // 2)
 npc = []
+ai = True
+
+
 for i in range(100):
     npc.append(Npc(width, height))
-c = [Core((1920 // 2, 1080 // 2))]
 while running:
+    i = 0
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -101,11 +126,8 @@ while running:
                 running = False
     screen.fill((255, 255, 255))
     scorers.draw()
+    scorers.shoot(npc)
+    scorers.maintainTower()
     scorers.checkRange(npc)
-    if scorers.chooseTarget(npc):
-        for projectile in c:
-            projectile.draw()
-            projectile.move(npc)
-            projectile.explosion(scorers.chooseTarget(npc), npc)
     pygame.display.flip()
     clock.tick(60)
