@@ -17,6 +17,7 @@ class Scorers_Tower:
         self.tower = pygame.image.load('tower_1_lvl.jpeg')
         self.tower_rect = self.tower.get_rect(center=(x, y))
         self.bombs = []
+        self.calldown = 1000
 
     def draw(self):
         screen.blit(self.tower, self.tower_rect)
@@ -28,7 +29,15 @@ class Scorers_Tower:
             yo = self.center[1] - npc[i].y
             distance = (xo ** 2 + yo ** 2) ** 0.5
             if distance <= self.radius:
+                if self.calldown == 1000:
+                    self.bombs.append(Core((1920 // 2, 1080 // 2)))
+                    self.calldown -= 1
+                elif self.calldown == 0:
+                    self.calldown = 1000
+                else:
+                    self.calldown -= 1
                 npcInRange.append((npc[i], distance))
+                print(self.bombs)
         return npcInRange
 
     def chooseTarget(self, npc):
@@ -39,22 +48,17 @@ class Scorers_Tower:
                 for j in range(i + 1, len(npcInRange)):
                     if npcInRange[j][1] < npcInRange[minimum][1]:
                         minimum = j
-                    npcInRange[minimum], npcInRange[i] =  npcInRange[i], npcInRange[minimum]
+                    npcInRange[minimum], npcInRange[i] = npcInRange[i], npcInRange[minimum]
         return npcInRange[0][0]
 
-    def maintainTower(self):
-        c = [Core((1920//2, 1080//2))]
-        scorers.checkRange(npc)
-        if scorers.chooseTarget(npc):
-            for projectile in c:
-                projectile.draw(screen)
-                projectile.move(npc)
-                projectile.explosion(scorers.chooseTarget(npc), npc)
+    def maintainTower(self, npc_array, screen):
+        for bomb in self.bombs:
+            bomb.move(npc_array)
+            bomb.draw(screen)
+            if bomb.hit:
+                self.bombs.remove(bomb)
         # 1) следит за ядрами мувает их следит за теми которые долетели и убирает их
         # 2) осуществляет прицеивание и стрельбу
-
-    def shoot(self, npc):
-        self.bombs.append(Core(((1920 // 2, 1080 // 2), (npc[i].x, npc[i].y))))
 
 
 class Core:
@@ -78,18 +82,18 @@ class Core:
 
     def move(self, npc_array):
         for i in range(len(npc_array)):
-            if npc_array[i].hp > 0:
-                if self.x > npc_array[i].x:
-                    self.x -= 0.2
+            if npc_array[i][0].hp > 0:
+                if self.x > npc_array[i][0].x:
+                    self.x -= 1
                     self.core_rect = self.core.get_rect(center=(self.x, self.y))
-                if self.x < npc_array[i].x:
-                    self.x += 0.2
+                if self.x < npc_array[i][0].x:
+                    self.x += 1
                     self.core_rect = self.core.get_rect(center=(self.x, self.y))
-                if self.y > npc_array[i].y:
-                    self.y -= 0.2
+                if self.y > npc_array[i][0].y:
+                    self.y -= 1
                     self.core_rect = self.core.get_rect(center=(self.x, self.y))
-                if self.y < npc_array[i].y:
-                    self.y += 0.2
+                if self.y < npc_array[i][0].y:
+                    self.y += 1
                     self.core_rect = self.core.get_rect(center=(self.x, self.y))
 
     def explosion(self, npc, npc_array):
@@ -100,6 +104,7 @@ class Core:
                 distanceFromEpicenter = (xo ** 2 + yo ** 2) ** 0.5
                 if distanceFromEpicenter <= self.boomRadius:
                     npc_array[i].hp -= self.damage
+        self.hit = True
 
 
 class Npc:
@@ -126,8 +131,7 @@ while running:
                 running = False
     screen.fill((255, 255, 255))
     scorers.draw()
-    scorers.shoot(npc)
-    scorers.maintainTower()
+    scorers.maintainTower(scorers.checkRange(npc), screen)
     scorers.checkRange(npc)
     pygame.display.flip()
     clock.tick(60)
