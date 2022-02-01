@@ -25,20 +25,11 @@ class Scorers_Tower:
     def checkRange(self, npc):
         npcInRange = []
         for i in range(len(npc)):
-            print(npc[i])
             xo = self.center[0] - npc[i].x
             yo = self.center[1] - npc[i].y
             distance = (xo ** 2 + yo ** 2) ** 0.5
             if distance <= self.radius:
-                if self.calldown == 1000:
-                    self.bombs.append(Core((1920 // 2, 1080 // 2), scorers.chooseTarget(scorers.checkRange(npc))))
-                    self.calldown -= 1
-                elif self.calldown == 0:
-                    self.calldown = 1000
-                else:
-                    self.calldown -= 1
                 npcInRange.append((npc[i], distance))
-                print(self.bombs)
         return npcInRange
 
     def chooseTarget(self, npc):
@@ -50,9 +41,11 @@ class Scorers_Tower:
                     if npcInRange[j][1] < npcInRange[minimum][1]:
                         minimum = j
                     npcInRange[minimum], npcInRange[i] = npcInRange[i], npcInRange[minimum]
+            # print(npcInRange)
             return npcInRange[0][0]
 
     def maintainTower(self, npc_array, screen):
+        self.draw()
         for bomb in self.bombs:
             bomb.move(npc_array)
             bomb.draw(screen)
@@ -62,6 +55,21 @@ class Scorers_Tower:
 
         # 1) следит за ядрами мувает их следит за теми которые долетели и убирает их
         # 2) осуществляет прицеивание и стрельбу
+
+    def calldownBomb(self, npc):
+        if self.checkRange(npc):
+
+                if self.calldown == 1000:
+                    self.maintainTower(scorers.chooseTarget(scorers.checkRange(npc)), screen)
+                    self.calldown -= 1
+                elif self.calldown == 0:
+                    self.calldown = 1000
+                else:
+                    self.calldown -= 1
+
+    def shoot(self, npc):
+        if npc:
+            self.bombs.append(Core(self.center, scorers.chooseTarget(scorers.checkRange(npc))))
 
 
 class Core:
@@ -135,9 +143,11 @@ while running:
             if event.key == pygame.K_ESCAPE:
                 running = False
     screen.fill((255, 255, 255))
+    scorers.checkRange(npc)
     scorers.draw()
     c.draw(screen)
-    scorers.maintainTower(scorers.checkRange(npc), screen)
-    scorers.checkRange(npc)
+    scorers.shoot(npc)
+    scorers.calldownBomb(npc)
+    scorers.maintainTower(scorers.chooseTarget(scorers.checkRange(npc)), screen)
     pygame.display.flip()
     clock.tick(60)
